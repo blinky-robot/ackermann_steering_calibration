@@ -78,6 +78,10 @@ int main(int argc, char *argv[])
 		usleep(100000); // .1 seconds for stabilizing
 		cmd.publish(msg);
 		usleep(100000); // .1 seconds for stabilizing
+		cmd.publish(msg);
+		usleep(100000); // .1 seconds for stabilizing
+		cmd.publish(msg);
+		usleep(100000); // .1 seconds for stabilizing
 
 		if (!data.beginMeasurement())
 		{

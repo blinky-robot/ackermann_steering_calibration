@@ -33,12 +33,14 @@ namespace ackermann_steering_calibration
 	DetermineAckermannAngle::DetermineAckermannAngle(ros::NodeHandle &nh, ros::NodeHandle &nh_priv)
 		: base_length(0.33),
 		  have_readings(0x0),
+		  wheel_diam(0.106),
 		  wheel_joint_name("wheels"),
 		  nh(nh),
 		  nh_priv(nh_priv)
 	{
 		boost::mutex::scoped_lock lock(reading_mutex);
 
+		nh_priv.param("wheel_diam", wheel_diam, wheel_diam);
 		nh_priv.param("base_length", base_length, base_length);
 		nh_priv.param("wheel_joint_name", wheel_joint_name, wheel_joint_name);
 
@@ -68,13 +70,15 @@ namespace ackermann_steering_calibration
 		initial_position = latest_position;
 		initial_time = latest_time;
 
-		ROS_INFO("Beginning values: heading %lf, position %lf", initial_heading, initial_position);
+		ROS_DEBUG("Beginning values: heading %lf, position %lf", initial_heading, initial_position);
 
 		return true;
 	}
 
 	bool DetermineAckermannAngle::endMeasurement(double &ackermann_angle)
 	{
+		double d_heading;
+
 		boost::mutex::scoped_lock lock(reading_mutex);
 
 		if (have_readings != 0x03)
@@ -83,9 +87,28 @@ namespace ackermann_steering_calibration
 			return false;
 		}
 
-		ROS_INFO("Finishing values: heading %lf, position %lf", latest_heading, latest_position);
+		d_heading = latest_heading - initial_heading;
+		while (d_heading > M_PI / 2.0)
+		{
+			d_heading -= M_PI;
+		}
+		while (d_heading < -M_PI / 2.0)
+		{
+			d_heading += M_PI;
+		}
 
-		ackermann_angle = atan2(base_length, (latest_position - initial_position) / (latest_heading - initial_heading));
+		ROS_DEBUG("Finishing values: heading %lf, position %lf", latest_heading, latest_position);
+
+		ackermann_angle = atan2(base_length, (latest_position - initial_position) / d_heading);
+
+		if (d_heading > 0)
+		{
+			ackermann_angle *= -1.0;
+		}
+		else
+		{
+			ackermann_angle = M_PI - ackermann_angle;
+		}
 
 		return true;
 	}
@@ -130,7 +153,7 @@ namespace ackermann_steering_calibration
 		ROS_DEBUG("Got joint data");
 
 		latest_time = msg->header.stamp;
-		latest_position = msg->position[idx];
+		latest_position = msg->position[idx] * wheel_diam / 2.0;
 
 		have_readings |= (1 << 1);
 	}

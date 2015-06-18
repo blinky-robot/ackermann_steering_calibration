@@ -55,6 +55,7 @@ namespace ackermann_steering_calibration
 		double initial_position;	
 		ros::Time initial_time;
 		boost::mutex reading_mutex;
+		double wheel_diam;
 		std::string wheel_joint_name;
 		
 		ros::Subscriber imu_sub;
